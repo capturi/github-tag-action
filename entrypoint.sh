@@ -38,12 +38,6 @@ tag_commit=$(git rev-list -n 1 $tag)
 # get current commit hash for tag
 commit=$(git rev-parse HEAD)
 
-if [ "$tag_commit" == "$commit" ]; then
-    echo "No new commits since previous tag. Bumping..."
-    # echo ::set-output name=tag::$tag
-    # exit 0
-fi
-
 # if there are none, start tags at 0.0.0
 if [ -z "$tag" ]
 then
@@ -53,18 +47,18 @@ else
     log=$(git log $tag..HEAD --pretty=oneline)
 fi
 
-# get commit logs and determine home to bump the version
-# supports #major, #minor, #patch (anything else will be 'minor')
-case "$log" in
-    *#major* ) new=$(semver bump major $tag);;
-    *#minor* ) new=$(semver bump minor $tag);;
-    *#patch* ) new=$(semver bump patch $tag);;
-    * ) new=$(semver bump `echo $default_semvar_bump` $tag);;
-esac
-
 if $pre_release
 then
-    new="$new-${commit:0:7}"
+    new="$tag-${commit:0:7}"
+else 
+    # get commit logs and determine home to bump the version
+    # supports #major, #minor, #patch (anything else will be 'minor')
+    case "$log" in
+        *#major* ) new=$(semver bump major $tag);;
+        *#minor* ) new=$(semver bump minor $tag);;
+        *#patch* ) new=$(semver bump patch $tag);;
+        * ) new=$(semver bump `echo $default_semvar_bump` $tag);;
+    esac
 fi
 
 echo $new
