@@ -81,6 +81,3 @@ echo "$dt: **pushing tag $new to repo $full_name"
 
 git tag $new $commit
 git tag latest $commit
-
-git push origin $new
-git push origin latest
