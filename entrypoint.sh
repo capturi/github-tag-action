@@ -49,7 +49,7 @@ fi
 
 if $pre_release
 then
-    new="$tag-${commit:0:7}"
+    new="$(git describe --tags)"
 else 
     # get commit logs and determine home to bump the version
     # supports #major, #minor, #patch (anything else will be 'minor')
