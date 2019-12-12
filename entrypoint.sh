@@ -67,6 +67,12 @@ echo $new
 echo ::set-output name=new_tag::$new
 echo ::set-output name=tag::$new
 
+if $pre_release
+then
+    echo "pre-release versions will not be tagged in git."
+    exit 0
+fi
+
 # push new tag ref to github
 dt=$(date '+%Y-%m-%dT%H:%M:%SZ')
 full_name=$GITHUB_REPOSITORY
