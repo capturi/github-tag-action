@@ -32,11 +32,7 @@ echo "pre_release = $pre_release"
 git fetch origin $BRANCH --tags
 
 # get latest tag
-tag=$(git describe --tags `git rev-list --tags --max-count=1`)
-tag_commit=$(git rev-list -n 1 $tag)
-
-# get current commit hash for tag
-commit=$(git rev-parse HEAD)
+tag=$(git describe --tags --match '*[0-9].*[0-9].*[0-9]' --abbrev=0 HEAD)
 
 # if there are none, start tags at 0.0.0
 if [ -z "$tag" ]
@@ -47,9 +43,14 @@ else
     log=$(git log $tag..HEAD --pretty=oneline)
 fi
 
+tag_commit=$(git rev-list -n 1 $tag)
+
+# get current commit hash for tag
+commit=$(git rev-parse HEAD)
+
 if $pre_release
 then
-    new="$(git describe --tags)"
+    new="$(git describe --tags --match '*[0-9].*[0-9].*[0-9]' HEAD)"
 else 
     # get commit logs and determine home to bump the version
     # supports #major, #minor, #patch (anything else will be 'minor')
