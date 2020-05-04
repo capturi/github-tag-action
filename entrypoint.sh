@@ -48,12 +48,6 @@ tag_commit=$(git rev-list -n 1 $tag)
 # get current commit hash for tag
 commit=$(git rev-parse HEAD)
 
-#if [ "$tag_commit" == "$commit" ]; then
-#    echo "No new commits since previous tag. Cannot reuse semvers."
-#    exit 1
-#fi
-
-
 if $pre_release
 then
     new="$(git describe --tags --match '*[0-9].*[0-9].*[0-9]' HEAD)"
@@ -79,6 +73,12 @@ then
     echo "pre-release versions will not be tagged in git."
     exit 0
 fi
+
+if [ "$tag_commit" == "$commit" ]; then
+    echo "No new commits since previous tag. We will return tag, but not push the tag."
+    exit 0
+fi
+
 
 # push new tag ref to github
 dt=$(date '+%Y-%m-%dT%H:%M:%SZ')
