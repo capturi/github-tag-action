@@ -23,12 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+      with:
+        fetch-depth: '0'
     - name: Bump version and push tag
-      uses: anothrNick/github-tag-action@master
+      uses: anothrNick/github-tag-action@1.17.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
 ```
+
+_NOTE: set the fetch-depth for `actions/checkout@master` to be sure you retrieve all commits to look for the semver commit message._
 
 #### Options
 
@@ -39,6 +43,8 @@ jobs:
 * **WITH_V** *(optional)* - Tag version with `v` character.
 * **RELEASE_BRANCHES** *(optional)* - Comma separated list of branches (bash reg exp accepted) that will generate the release tags. Other branches and pull-requests generate versions postfixed with the commit hash and do not generate any tag. Examples: `master` or `.*` or `release.*,hotfix.*,master` ...
 * **CUSTOM_TAG** *(optional)* - Set a custom tag, useful when generating tag based on f.ex FROM image in a docker image. **Setting this tag will invalidate any other settings set!**
+* **SOURCE** *(optional)* - Operate on a relative path under $GITHUB_WORKSPACE.
+* **DRY_RUN** *(optional)* - Determine the next version without tagging the branch. The workflow can use the outputs `new_tag` and `tag` in subsequent steps. Possible values are ```true``` and ```false``` (default). 
 
 #### Outputs
 
