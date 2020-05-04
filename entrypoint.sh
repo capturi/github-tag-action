@@ -32,7 +32,7 @@ tag_commit=$(git rev-list -n 1 $tag)
 commit=$(git rev-parse HEAD)
 
 if [ "$tag_commit" == "$commit" ]; then
-    echo "No new commits since previous tag. Skipping..."
+    echo "No new commits since previous tag - $tag. Skipping..."
     echo ::set-output name=tag::$tag
     exit 0
 fi
