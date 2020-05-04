@@ -37,10 +37,10 @@ tag=$(git describe --tags --match '*[0-9].*[0-9].*[0-9]' --abbrev=0 HEAD)
 # if there are none, start tags at 0.0.0
 if [ -z "$tag" ]
 then
-    log=$(git log --pretty=oneline)
+    log=$(git log --pretty='%B')
     tag=0.0.0
 else
-    log=$(git log $tag..HEAD --pretty=oneline)
+    log=$(git log $tag..HEAD --pretty='%B')
 fi
 
 tag_commit=$(git rev-list -n 1 $tag)
@@ -66,7 +66,16 @@ echo $new
 
 # set outputs
 echo ::set-output name=new_tag::$new
+
+# use dry run to determine the next tag
+if $dryrun
+then
+    echo ::set-output name=tag::$tag
+    exit 0
+fi 
+
 echo ::set-output name=tag::$new
+
 
 if $pre_release
 then
