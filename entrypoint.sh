@@ -1,22 +1,14 @@
 #!/bin/bash
 
-set -e
-set -o xtrace
-
-if [[ -z "$GITHUB_TOKEN" ]]; then
-	echo "Set the GITHUB_TOKEN env variable."
-	exit 1
-fi
-
 # config
 default_semvar_bump=${DEFAULT_BUMP:-minor}
+with_v=${WITH_V:-false}
 release_branches=${RELEASE_BRANCHES:-master}
+custom_tag=${CUSTOM_TAG}
+source=${SOURCE:-.}
+dryrun=${DRY_RUN:-false}
 
-repo_fullname=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
-
-git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/$repo_fullname.git
-git config --global user.email "actions@github.com"
-git config --global user.name "GitHub Merge Action"
+cd ${GITHUB_WORKSPACE}/${source}
 
 pre_release="true"
 IFS=',' read -ra branch <<< "$release_branches"
@@ -29,10 +21,21 @@ for b in "${branch[@]}"; do
 done
 echo "pre_release = $pre_release"
 
-git fetch origin $BRANCH --tags
+# fetch tags
+git fetch --tags
 
-# get latest tag
-tag=$(git describe --tags --match '*[0-9].*[0-9].*[0-9]' --abbrev=0 HEAD)
+# get latest tag that looks like a semver (with or without v)
+tag=$(git for-each-ref --sort=-v:refname --count=1 --format '%(refname)' refs/tags/[0-9]*.[0-9]*.[0-9]* refs/tags/v[0-9]*.[0-9]*.[0-9]* | cut -d / -f 3-)
+tag_commit=$(git rev-list -n 1 $tag)
+
+# get current commit hash for tag
+commit=$(git rev-parse HEAD)
+
+if [ "$tag_commit" == "$commit" ]; then
+    echo "No new commits since previous tag. Skipping..."
+    echo ::set-output name=tag::$tag
+    exit 0
+fi
 
 # if there are none, start tags at 0.0.0
 if [ -z "$tag" ]
@@ -43,23 +46,35 @@ else
     log=$(git log $tag..HEAD --pretty='%B')
 fi
 
-tag_commit=$(git rev-list -n 1 $tag)
+echo $log
 
-# get current commit hash for tag
-commit=$(git rev-parse HEAD)
+# get commit logs and determine home to bump the version
+# supports #major, #minor, #patch (anything else will be 'minor')
+case "$log" in
+    *#major* ) new=$(semver bump major $tag);;
+    *#minor* ) new=$(semver bump minor $tag);;
+    *#patch* ) new=$(semver bump patch $tag);;
+    * ) new=$(semver bump `echo $default_semvar_bump` $tag);;
+esac
 
-if $pre_release
+# did we get a new tag?
+if [ ! -z "$new" ]
 then
-    new="$(git describe --tags --match '*[0-9].*[0-9].*[0-9]' HEAD)"
-else 
-    # get commit logs and determine home to bump the version
-    # supports #major, #minor, #patch (anything else will be 'minor')
-    case "$log" in
-        *#major* ) new=$(semver bump major $tag);;
-        *#minor* ) new=$(semver bump minor $tag);;
-        *#patch* ) new=$(semver bump patch $tag);;
-        * ) new=$(semver bump `echo $default_semvar_bump` $tag);;
-    esac
+	# prefix with 'v'
+	if $with_v
+	then
+			new="v$new"
+	fi
+
+	if $pre_release
+	then
+			new="$new-${commit:0:7}"
+	fi
+fi
+
+if [ ! -z $custom_tag ]
+then
+    new="$custom_tag"
 fi
 
 echo $new
@@ -67,7 +82,7 @@ echo $new
 # set outputs
 echo ::set-output name=new_tag::$new
 
-# use dry run to determine the next tag
+# use dry run to determine the next tag
 if $dryrun
 then
     echo ::set-output name=tag::$tag
@@ -79,21 +94,23 @@ echo ::set-output name=tag::$new
 
 if $pre_release
 then
-    echo "pre-release versions will not be tagged in git."
+    echo "This branch is not a release branch. Skipping the tag creation."
     exit 0
 fi
-
-if [ "$tag_commit" == "$commit" ]; then
-    echo "No new commits since previous tag. We will return tag, but not push the tag."
-    exit 0
-fi
-
 
 # push new tag ref to github
 dt=$(date '+%Y-%m-%dT%H:%M:%SZ')
 full_name=$GITHUB_REPOSITORY
+git_refs_url=$(jq .repository.git_refs_url $GITHUB_EVENT_PATH | tr -d '"' | sed 's/{\/sha}//g')
 
 echo "$dt: **pushing tag $new to repo $full_name"
 
-git tag $new $commit
-git push origin $new
+curl -s -X POST $git_refs_url \
+-H "Authorization: token $GITHUB_TOKEN" \
+-d @- << EOF
+
+{
+  "ref": "refs/tags/$new",
+  "sha": "$commit"
+}
+EOF
