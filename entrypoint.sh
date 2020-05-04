@@ -48,10 +48,11 @@ tag_commit=$(git rev-list -n 1 $tag)
 # get current commit hash for tag
 commit=$(git rev-parse HEAD)
 
-if [ "$tag_commit" == "$commit" ]; then
-    echo "No new commits since previous tag. Cannot reuse semvers."
-    exit 1
-fi
+#if [ "$tag_commit" == "$commit" ]; then
+#    echo "No new commits since previous tag. Cannot reuse semvers."
+#    exit 1
+#fi
+
 
 if $pre_release
 then
