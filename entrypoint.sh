@@ -10,7 +10,7 @@ dryrun=${DRY_RUN:-false}
 
 cd ${GITHUB_WORKSPACE}/${source}
 
-pre_release="true"
+pre_release="false" #we don't use this term, and wan't to tag on PR
 IFS=',' read -ra branch <<< "$release_branches"
 for b in "${branch[@]}"; do
     echo "Is $b a match for ${GITHUB_REF#'refs/heads/'}"
